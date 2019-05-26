@@ -1,10 +1,11 @@
 import sys
 import pygame
 from math import pi, sin
+import random
 
 pygame.init()
 
-size = display_width, display_height = 1000, 600
+size = display_width, display_height = 800, 600
 BG_COLOR =              (117, 117, 117)
 GRAY =                  (127, 127, 127)
 BLACK =                 (  0,   0,   0)
@@ -12,30 +13,51 @@ WHITE =                 (255, 255, 255)
 BUTTON_SELECTED_HOVER = (  0, 150, 136)
 BUTTON_SELECTED =       (  0, 171, 153)
 DARK_BLUE =             (  0,   0, 200)
-BUTTON =                (  0, 131, 143)
-BUTTON_HOVER =          (  0, 151, 167)
+BUTTON =                (  0, 151, 167)
+BUTTON_HOVER =          (  0, 131, 143)
 GREEN =                 (0  , 200,   0)
 RED =                   (255,   0,   0)
 
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption("PyDato")
 clock = pygame.time.Clock()
-level = ['Easy', 'Medium', 'Hard']  # optional game levels
+level = ['Easy', 'Medium', 'Hard']  # game levels
 selected_level = level[0]  # keep the game level in memory
 game_started = 0  # in order to no to lose your point if clicking on other stuff by mistake
-hex_counter = 0
-hex_filled = []
-hex_correct = []
-button_group = []
+hex_filled = []  # to control which hexagon is already filled
+hex_correct = []  # the list of correct answers. this is a sub-list of hex_filled
+button_group = ['level', 'game_control']  # to control button behaviors in for diffent GUI parts
+selected_hexagon = 0
+hex_coords = []
+corners = []
+sides = []
+
 
 def hive():
+    global corners, sides
     if selected_level is level[0]:
         hive_struct = [3, 4, 5, 4, 3]
     elif selected_level is level[1]:
         hive_struct = [4, 5, 6, 7, 6, 5, 4]
     else:
         hive_struct = [5, 6, 7, 8, 9, 8, 7, 6, 5]
+
+    corners = [[0, 0], [0, hive_struct[0] - 1], [int((len(hive_struct) - 1) / 2), 0], [int((len(hive_struct) - 1) / 2), len(hive_struct) - 1], [len(hive_struct) - 1, 0], [len(hive_struct) - 1, len(hive_struct) - 1]]
+    sides =
+    print(corners)
+
     return hive_struct
+
+
+def create_hidato_list():
+    list_len = sum(hive())
+    for i, row in enumerate(hive()):
+        for item in range(row):
+            hex_coords.append([i, item])
+
+    hidato_list = random.sample(range(1, list_len + 1), list_len)
+
+    return hidato_list
 
 
 # determine if a point is inside a given polygon or not
@@ -60,52 +82,78 @@ def point_inside_polygon(x, y, poly):
 
 # function for text creation
 def text_objects(text, font):
-    textSurface = font.render(text, True, WHITE)
-    return textSurface, textSurface.get_rect()
+    text_surface = font.render(text, True, WHITE)
+    return text_surface, text_surface.get_rect()
 
 
 # function for text display
-def message_display(text):
-    largeText = pygame.font.Font('freesans.ttf',100)
-    TextSurf, TextRect = text_objects(text, largeText)
-    TextRect.center = ((display_width/2),(display_height/2))
-    screen.blit(TextSurf, TextRect)
-
-
-# function to draw a hexagon
-def draw_hex(number, x, y, side_length, line_color, line_width):  # , fill_color
-
-    diagonal_sin = int((sin(pi/3)) * float(side_length))
-    diagonal_cos = int((sin(pi/6)) * float(side_length))
-
-    hex_coords = [x, y], [x + diagonal_sin, y + diagonal_cos], [x + diagonal_sin, y + diagonal_cos + side_length], [x, y  + 2 * diagonal_cos + side_length], [x - diagonal_sin, y + diagonal_cos + side_length], [x - diagonal_sin, y + diagonal_cos]
-    hex_coords_2 = [x, y + 1], [x - 1 + diagonal_sin, y + diagonal_cos], [x - 1 + diagonal_sin, y + diagonal_cos + side_length], [x , y - 1 + 2 * diagonal_cos + side_length], [x + 1 - diagonal_sin, y + diagonal_cos + side_length], [x + 1 - diagonal_sin, y + diagonal_cos]
-
-    # check if mouse in hexagon
-    mx, my = pygame.mouse.get_pos()
-    if point_inside_polygon(mx, my, hex_coords):
-        line_color = DARK_BLUE
-
-    pygame.draw.aalines(screen, line_color, True, hex_coords, True)
-    pygame.draw.aalines(screen, line_color, True, hex_coords_2, True)
-
-    small_text = pygame.font.Font("freesansbold.ttf", 18)
-    text_surf, text_rect = text_objects(number, small_text)
-    text_rect.center = (x, y + side_length)
+def message_display(x_text_center, y_text_center, text, fontsize):
+    text_font = pygame.font.Font('freesansbold.ttf', fontsize)
+    text_surf, text_rect = text_objects(text, text_font)
+    text_rect.center = (x_text_center, y_text_center)
     screen.blit(text_surf, text_rect)
 
 
+# function to draw a hexagon
+def draw_hex(number, x, y, side_length, line_color, active_color, inactive_color, active_selected, inactive_selected):  # , fill_color
+    global selected_hexagon
+    fill_color = inactive_color if selected_hexagon != number else inactive_selected
+    diagonal_sin = int((sin(pi/3)) * float(side_length))
+    diagonal_cos = int((sin(pi/6)) * float(side_length))
+
+    hex_coords = [x, y], [x + diagonal_sin, y + diagonal_cos], [x + diagonal_sin, y + diagonal_cos + side_length], [x, y + 2 * diagonal_cos + side_length], [x - diagonal_sin, y + diagonal_cos + side_length], [x - diagonal_sin, y + diagonal_cos]
+    hex_coords_2 = [x, y + 1], [x - 1 + diagonal_sin, y + diagonal_cos], [x - 1 + diagonal_sin, y + diagonal_cos + side_length], [x, y - 1 + 2 * diagonal_cos + side_length], [x + 1 - diagonal_sin, y + diagonal_cos + side_length], [x + 1 - diagonal_sin, y + diagonal_cos]
+
+    # check if mouse in hexagon
+    mx, my = pygame.mouse.get_pos()
+    clicked = pygame.mouse.get_pressed()
+    if point_inside_polygon(mx, my, hex_coords):
+        if clicked[0]:
+            selected_hexagon = number
+
+        if selected_hexagon == number:
+            fill_color = active_selected
+        else:
+            fill_color = active_color
+
+    pygame.draw.polygon(screen, fill_color, hex_coords, 0)
+    pygame.draw.aalines(screen, line_color, True, hex_coords, True)
+    pygame.draw.aalines(screen, line_color, True, hex_coords_2, True)
+
+    # text_surf, text_rect = text_objects(number, small_text)
+    message_display(x, y + side_length, number, 18)
+
+
+# draw the hive
+def draw_hive():
+    global hex_counter
+    for i, hexa in enumerate(hive()):
+        for hex_i in range(hexa):
+
+            # mouse = pygame.mouse.get_pos()
+            draw_hex(str(current_list[hex_counter]), 400 + hex_i * 50 - hexa * 25 + 1, 150 + i * 45 + 1, 30, WHITE, BUTTON, BUTTON_HOVER, BUTTON_SELECTED, BUTTON_SELECTED_HOVER)
+            hex_counter += 1
+
+
 # function for creating buttons
-def button(msg, x, y, w, h, inactive_color, active_color, inactive_selected, active_selected):
-    global selected_level
+def button(msg, x, y, w, h, inactive_color, active_color, inactive_selected, active_selected, group):
+    global selected_level, current_list, selected_hexagon
 
     mouse = pygame.mouse.get_pos()
     clicked = pygame.mouse.get_pressed()
 
     # check if mode button clicked and change current selection
     if x <= mouse[0] <= x + w and y <= mouse[1] <= y + h:
-        if clicked[0] and msg is not "New Game":
-            selected_level = msg
+        if clicked[0]:
+            if group is not button_group[1]:
+                selected_level = msg
+            elif group is button_group[1]:
+                pygame.draw.rect(screen, active_selected, [x, y, w, h])
+            current_list = create_hidato_list()
+            selected_hexagon = 0
+
+    # TODO accept only a single change per mouse click
+
 
     # check if button is selected and if mouse is hovering and change colors accordingly
     if selected_level == msg:
@@ -120,14 +168,16 @@ def button(msg, x, y, w, h, inactive_color, active_color, inactive_selected, act
             pygame.draw.rect(screen, active_color, [x, y, w, h])
 
     # set button caption
-    small_text = pygame.font.Font("freesansbold.ttf", 18)
-    text_surf, text_rect = text_objects(msg, small_text)
-    text_rect.center = ((x + (w / 2)), (y + (h / 2)))
-    screen.blit(text_surf, text_rect)
+    message_display(x + w / 2, y + h / 2, msg, 18)
 
-    # TODO rouned corners for the buttons
+    # TODO rounded corners for the buttons
+
+
+current_list = create_hidato_list()
+
 
 while 1:
+    hex_counter = 0  # helps in creating the numbering
     clock.tick(10)
 
     for event in pygame.event.get():
@@ -136,18 +186,15 @@ while 1:
 
     screen.fill(BG_COLOR)
 
-    for i, hexa in enumerate(hive()):
-        for hex_i in range(hexa):
-            hex_counter += 1
-            draw_hex(str(hex_counter), 400 + hex_i * 50 - hexa * 25 + 1, 150 + i * 45 + 1, 30, WHITE, True)
-            # pygame.draw.circle(screen, GREEN, [400 + hex_i * 50 - hexa * 25, 150 + i * 45 + 25], 24)
-
+    draw_hive()
+    print(hex_coords)
     # create difficulty selection buttons
     for b in range(len(level)):
-        button(level[b], 100 + b * 110, 50, 80, 40, BUTTON, BUTTON_HOVER, BUTTON_SELECTED, BUTTON_SELECTED_HOVER)
+        button(level[b], 100 + b * 110, 50, 80, 40, BUTTON, BUTTON_HOVER, BUTTON_SELECTED, BUTTON_SELECTED_HOVER, button_group[0])
 
     # create start new game button
-    button('New Game', 500 + b * 110, 50, 120, 60, BUTTON, BUTTON_HOVER, BUTTON_SELECTED, BUTTON_SELECTED_HOVER)
+    button('New Game', 500, 50, 120, 60, BUTTON, BUTTON_HOVER, BUTTON_SELECTED, BUTTON_SELECTED_HOVER, button_group[1])
 
     hex_counter = 0
+    hex_coords = []
     pygame.display.flip()
