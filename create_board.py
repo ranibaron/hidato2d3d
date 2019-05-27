@@ -34,7 +34,6 @@ sides = []
 
 
 def hive():
-    global corners, sides
     if selected_level is level[0]:
         hive_struct = [3, 4, 5, 4, 3]
     elif selected_level is level[1]:
@@ -42,11 +41,36 @@ def hive():
     else:
         hive_struct = [5, 6, 7, 8, 9, 8, 7, 6, 5]
 
-    corners = [[0, 0], [0, hive_struct[0] - 1], [int((len(hive_struct) - 1) / 2), 0], [int((len(hive_struct) - 1) / 2), len(hive_struct) - 1], [len(hive_struct) - 1, 0], [len(hive_struct) - 1, len(hive_struct) - 1]]
-    sides =
-    print(corners)
-
     return hive_struct
+
+
+def hexagon_special_hexas():
+    global corners, sides
+    side_hexas = []
+    hive()
+
+        # get the coordinates of the big hexagon coreners
+    corner_hexas = [[0, 0], [0, hive_struct[0] - 1], [int((len(hive_struct) - 1) / 2), 0], [int((len(hive_struct) - 1) / 2), len(hive_struct) - 1], [len(hive_struct) - 1, 0], [len(hive_struct) - 1, len(hive_struct) - 1]]
+    # get the sides of the big hexagon - ordered clockwise: top, left_top, left_bottom, bottom, right_bottom, right_top
+    for i in range(6):
+        side_length = hive_struct[0] - 2
+        for j in range(side_length):
+            if i == 0:
+                side_hexas.append([j + 1, 0])
+            elif i == 1:
+                side_hexas.append([(hive_struct[j]), j + 1])
+            elif i == 2:
+                side_hexas.append([len(hive_struct) - 2 - j, hive_struct[j]])
+            elif i == 3:
+                side_hexas.append([j + 1, len(hive_struct) - 1])
+            elif i == 4:
+                side_hexas.append([0, hive_struct[j]])
+            elif i == 5:
+                side_hexas.append([0, j + 1])
+        sides.append(side_hexas)
+        side_hexas = []
+
+hexagon_special_hexas()
 
 
 def create_hidato_list():
@@ -174,7 +198,7 @@ def button(msg, x, y, w, h, inactive_color, active_color, inactive_selected, act
 
 
 current_list = create_hidato_list()
-
+print(corners, sides)
 
 while 1:
     hex_counter = 0  # helps in creating the numbering
@@ -187,7 +211,6 @@ while 1:
     screen.fill(BG_COLOR)
 
     draw_hive()
-    print(hex_coords)
     # create difficulty selection buttons
     for b in range(len(level)):
         button(level[b], 100 + b * 110, 50, 80, 40, BUTTON, BUTTON_HOVER, BUTTON_SELECTED, BUTTON_SELECTED_HOVER, button_group[0])
@@ -196,5 +219,5 @@ while 1:
     button('New Game', 500, 50, 120, 60, BUTTON, BUTTON_HOVER, BUTTON_SELECTED, BUTTON_SELECTED_HOVER, button_group[1])
 
     hex_counter = 0
-    hex_coords = []
+    hex_coords = sides = []
     pygame.display.flip()
