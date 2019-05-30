@@ -26,12 +26,12 @@ selected_level = level[0]  # keep the game level in memory
 game_started = 0  # in order to no to lose your point if clicking on other stuff by mistake
 hex_filled = []  # to control which hexagon is already filled
 hex_correct = []  # the list of correct answers. this is a sub-list of hex_filled
-button_group = ['level', 'game_control']  # to control button behaviors in for diffent GUI parts
+button_group = ['level', 'game_control', 'new_game']  # to control button behaviors in for diffent GUI parts
 selected_hexagon = 0
 hex_coords = []
 corners = []
 sides = []
-
+restart_game_display = False
 
 def hive():
     if selected_level is level[0]:
@@ -47,30 +47,28 @@ def hive():
 def hexagon_special_hexas():
     global corners, sides
     side_hexas = []
-    hive()
+    struct = hive()
 
-        # get the coordinates of the big hexagon coreners
-    corner_hexas = [[0, 0], [0, hive_struct[0] - 1], [int((len(hive_struct) - 1) / 2), 0], [int((len(hive_struct) - 1) / 2), len(hive_struct) - 1], [len(hive_struct) - 1, 0], [len(hive_struct) - 1, len(hive_struct) - 1]]
+    # get the coordinates of the big hexagon coreners
+    corner_hexas = [[0, 0], [0, struct[0] - 1], [int((len(struct) - 1) / 2), 0], [int((len(struct) - 1) / 2), len(struct) - 1], [len(struct) - 1, 0], [len(struct) - 1, len(struct) - 1]]
     # get the sides of the big hexagon - ordered clockwise: top, left_top, left_bottom, bottom, right_bottom, right_top
     for i in range(6):
-        side_length = hive_struct[0] - 2
+        side_length = struct[0] - 2
         for j in range(side_length):
             if i == 0:
                 side_hexas.append([j + 1, 0])
             elif i == 1:
-                side_hexas.append([(hive_struct[j]), j + 1])
+                side_hexas.append([(struct[j]), j + 1])
             elif i == 2:
-                side_hexas.append([len(hive_struct) - 2 - j, hive_struct[j]])
+                side_hexas.append([len(struct) - 2 - j, struct[j]])
             elif i == 3:
-                side_hexas.append([j + 1, len(hive_struct) - 1])
+                side_hexas.append([j + 1, len(struct) - 1])
             elif i == 4:
-                side_hexas.append([0, hive_struct[j]])
+                side_hexas.append([0, struct[j]])
             elif i == 5:
                 side_hexas.append([0, j + 1])
         sides.append(side_hexas)
         side_hexas = []
-
-hexagon_special_hexas()
 
 
 def create_hidato_list():
@@ -156,12 +154,13 @@ def draw_hive():
 
             # mouse = pygame.mouse.get_pos()
             draw_hex(str(current_list[hex_counter]), 400 + hex_i * 50 - hexa * 25 + 1, 150 + i * 45 + 1, 30, WHITE, BUTTON, BUTTON_HOVER, BUTTON_SELECTED, BUTTON_SELECTED_HOVER)
-            hex_counter += 1
+            if hex_counter >= sum(hive()):
+                hex_counter += 1
 
 
 # function for creating buttons
 def button(msg, x, y, w, h, inactive_color, active_color, inactive_selected, active_selected, group):
-    global selected_level, current_list, selected_hexagon
+    global selected_level, current_list, selected_hexagon, restart_game_display
 
     mouse = pygame.mouse.get_pos()
     clicked = pygame.mouse.get_pressed()
@@ -169,12 +168,23 @@ def button(msg, x, y, w, h, inactive_color, active_color, inactive_selected, act
     # check if mode button clicked and change current selection
     if x <= mouse[0] <= x + w and y <= mouse[1] <= y + h:
         if clicked[0]:
-            if group is not button_group[1]:
+            if group is button_group[0]:
+                if not restart_game_display:
+                    sure_you_want_to_restart('show')
                 selected_level = msg
+                restart_game_display = True
             elif group is button_group[1]:
+                if not restart_game_display:
+                    sure_you_want_to_restart('show')
                 pygame.draw.rect(screen, active_selected, [x, y, w, h])
-            current_list = create_hidato_list()
-            selected_hexagon = 0
+                restart_game_display = True
+            elif group is button_group[2]:
+                if msg is 'Start new game':
+                    current_list = create_hidato_list()
+                    selected_hexagon = 0
+                    restart_game_display = False
+                else:
+                    sure_you_want_to_restart('hide')
 
     # TODO accept only a single change per mouse click
 
@@ -197,8 +207,20 @@ def button(msg, x, y, w, h, inactive_color, active_color, inactive_selected, act
     # TODO rounded corners for the buttons
 
 
+def sure_you_want_to_restart(action):
+    if action is 'show':
+        s = pygame.Surface(size)  # the size of your rect
+        s.set_alpha(128)                # alpha level
+        s.fill((200,200,200))           # this fills the entire surface
+        message_display(display_width / 2, display_height / 2, 'Are you sure you want to restart the game?', 30)
+        button('Start new game', display_width / 2 - 250, display_height / 2 + 100, 200, 60, BUTTON, BUTTON_HOVER, BUTTON_SELECTED, BUTTON_SELECTED_HOVER, button_group[2])
+        button('Continue current game', display_width / 2 + 100, display_height / 2 + 100, 200, 60, BUTTON, BUTTON_HOVER, BUTTON_SELECTED, BUTTON_SELECTED_HOVER, button_group[2])
+        screen.blit(s, (0,0))    # (0,0) are the top-left coordinates
+    else:
+        pass
+
 current_list = create_hidato_list()
-print(corners, sides)
+
 
 while 1:
     hex_counter = 0  # helps in creating the numbering
